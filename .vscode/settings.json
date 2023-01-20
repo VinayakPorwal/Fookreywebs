@@ -1,0 +1,9 @@
+{
+    "[html]": {
+
+        "editor.suggest.insertMode": "replace"
+    },
+    "html.validate.scripts": false,
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    
+}
