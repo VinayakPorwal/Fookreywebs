@@ -1,124 +1,62 @@
 const express = require("express");
 const app = express();
-const path = require("path");
-const fs = require("fs");
-const db = require("./db.js");
-const mongoose = require("mongoose");
-const ytdl = require("ytdl-core");
-const cors = require("cors");
-const date = new Date();
-// const bodyparser = require("body-parser");
+// const db = require("@cyclic.sh/dynamodb");
 
-app.use(cors());
+const User = require("./models/user");
 app.use(express.json());
-// For serving static files
-app.use(express.static(path.join(__dirname, "public")));
-
-// for getting file path from website
 app.use(express.urlencoded({ extended: true }));
+const path = require("path");
+const cors = require("cors");
+const auth = require("./routes/auth");
+const Dbs = require("./db");
+const fs = require("fs");
+const ytdl = require("ytdl-core");
 
-//schema for contact form
-const schema = new mongoose.Schema({
-  name: String,
-  email: String,
-  subject: String,
-  message: String,
-  date: Date,
-});
-const Contact = mongoose.model("contact", schema);
-
-// Set the template engine as ejs
 app.set("view engine", "ejs");
+app.use(express.json());
+app.use(cors());
+app.use("/auth", auth);
+process.env.YTDL_NO_UPDATE = "1";
 
-// Set the views directory
-// app.set("views", path.join(__dirname, "views"));
-app.get("/", (req, res) => {
-  res.status(200).send("demo");
-});
-app.get("/2", (req, res) => {
-  res.status(200).render("demo");
-});
-app.get("/contact", (req, res) => {
-  res.status(200).render("contact");
-});
-app.get("/about", (req, res) => {
-  res.status(200).render("about");
-});
-app.get("/projects", (req, res) => {
-  res.status(200).render("projects");
-});
-app.get("/signup", (req, res) => {
-  res.status(200).render("signup", { alert: "" });
-});
-app.get("/login", (req, res) => {
-  res.status(200).render("login", { alert: "" });
+app.get("/users", async (req, res) => {
+  const users = await User.find();
+  console.log(users);
+  res.json({ user: users }).end();
 });
 
-
-
-app.get("/down", async (req, res) => {
-  // var URL = req.query.URL;
-  // res.json({ url: URL });
-
-
-  // ytdl(url)
-  //   .pipe(fs.createWriteStream(videoName))
-  //   .on("finish", () => {
-  //     console.log(`${videoName} has been downloaded!`);
-  //   });
-
-
-
-  // res.header("Content-Disposition", 'attachment; filename="video.mp4"');
-  // ytdl(url, {
-  //   format: "mp4",
-  // }).pipe(res);
-
-
-  const url = 'https://www.youtube.com/watch?v=FZtVeOKjXhM';
-  const videoName = 'never-gonna-give-you-up.mp4';
-  
-  ytdl(url, { filter: format => format.container === 'mp4' })
-    .pipe(fs.createWriteStream(videoName))
-    .on('finish', () => {
-      console.log(`${videoName} has been downloaded!`);
-    });
-
-
-
-  //for video Info and related Videos
-  // let info = await ytdl.getInfo("xNTW2KfErTM");
-  // console.log(info)
-  res.send("done");
+app.get("/", async (req, res) => {
+  res.sendFile(path.join(__dirname, "./index.html"));
 });
 
-//-----get data of input to store in text file-----
-// app.post('/submited', (req, res) => {
-//   namefull = req.body.Name;
-//   email = req.body.Email;
-//   subject = req.body.Subject;
-//   message = req.body.Message;
-//   let out = `name is ${namefull},\n email is ${email},\n Subect is ${subject},\n Message for you ${message}`;
-//   fs.writeFileSync('outputt.txt', out);
-//   console.log(req.body);
-//   res.status(200).render("submited");
-// });
+app.get("/index", (req, res) => {
+  return res.render("index");
+});
 
-//-----to store Contact Form data in database-----
+app.get("/transcript", async (req, res) => {
+  // const v_id = req.query.url.split('v=')[1];
+  return res.send({
+    details: "here",
+  });
+});
 
-app.post("/contact", (req, res) => {
-  var myData = new Contact(req.body);
-  myData
-    .save()
-    .then(() => {
-      console.log(myData);
-      res.send("This item has been saved to the database");
-    })
-    .catch(() => {
-      res.status(400).send("item was not saved to the databse");
-      console.log(myData);
-      // console.log(res)
-    });
+app.get("/download", async (req, res) => {
+  const v_id = req.query.url.split("v=")[1];
+  const info = await ytdl.getInfo(req.query.url);
+  // return res.render(("download"), {
+  return res.send({
+    url: "https://www.youtube.com/embed/" + v_id,
+    info: info.formats.sort((a, b) => {
+      return a.mimeType < b.mimeType;
+    }),
+    data : info.related_videos,
+  });
+});
+app.get("/relatedInfo", async (req, res) => {
+  const info = await ytdl.getInfo(req.query.url);
+  // return res.render(("download"), {
+  return res.send({
+    data : info.related_videos,
+  });
 });
 
 // Catch all handler for all other request.
@@ -127,47 +65,63 @@ app.use("*", (req, res) => {
   // res.sendFile(path.join(__dirname, "./index.html"));
 });
 
-// strat the server
-const port = process.env.PORT || 3000;
+// Start the server
+const port = process.env.PORT || 5000;
 app.listen(port, () => {
   console.log(`index.js listening on ${port}`);
 });
 
-// technique to get connect with server without express
-// const http = require('http');
-// const fs = require('fs');
-// const hostname = '127.0.0.1';
-// const port = 80;
+// #############################################################################
+// This configures static hosting for files in /public that have the extensions
+// listed in the array.
+// var options = {
+//   dotfiles: 'ignore',
+//   etag: false,
+//   extensions: ['htm', 'html','css','js','ico','jpg','jpeg','png','svg'],
+//   index: ['index.html'],
+//   maxAge: '1m',
+//   redirect: false
+// }
+// app.use(express.static('public', options))
+// #############################################################################
 
-// const home = fs.readFileSync('./home.html');
-// const about = fs.readFileSync('./about.html');
-// const contact = fs.readFileSync('./contact.html');
-// const project = fs.readFileSync('./projects.html');
-// const server = http.createServer((req, res) => {
-//   res.statusCode = 200;
-//   url = req.url;
-//   console.log(url);
-//   res.setHeader('Content-Type', 'text/html');
-//   if (url == '/') {
-//     res.end(home);
-//   }
-//   else if (url == '/about') {
-//     res.end(about);
-//   }
+// Create or Update an item
+// app.post('/:col/:key', async (req, res) => {
+//   console.log(req.body)
 
-//   else if (url == '/contact') {
-//     res.end(contact);
-//   }
-//   else if (url == '/projects') {
-//     res.end(project);
-//   }
-//   else {
-//     res.statusCode = 404;
-//     res.end("<h1>404 not found</h1>");
-//   }
-// });
+//   const col = req.params.col
+//   const key = req.params.key
+//   console.log(`from collection: ${col} delete key: ${key} with params ${JSON.stringify(req.params)}`)
+//   const item = await db.collection(col).set(key, req.body)
+//   console.log(JSON.stringify(item, null, 2))
+//   res.json(item).end()
+// })
 
-// server.listen(port, hostname, () => {
-//   console.log(`Server running at http://${hostname}:${port}/`);
-// });
+// Delete an item
+// app.delete('/:col/:key', async (req, res) => {
+//   const col = req.params.col
+//   const key = req.params.key
+//   console.log(`from collection: ${col} delete key: ${key} with params ${JSON.stringify(req.params)}`)
+//   const item = await db.collection(col).delete(key)
+//   console.log(JSON.stringify(item, null, 2))
+//   res.json(item).end()
+// })
 
+// Get a single item
+// app.get('/:col/:key', async (req, res) => {
+//   const col = req.params.col
+//   const key = req.params.key
+//   console.log(`from collection: ${col} get key: ${key} with params ${JSON.stringify(req.params)}`)
+//   const item = await db.collection(col).get(key)
+//   console.log(JSON.stringify(item, null, 2))
+//   res.json(item).end()
+// })
+
+// Get a full listing
+// app.get('/:col', async (req, res) => {
+//   const col = req.params.col
+//   console.log(`list collection: ${col} with params: ${JSON.stringify(req.params)}`)
+//   const items = await db.collection(col).list()
+//   console.log(JSON.stringify(items, null, 2))
+//   res.json(items).end()
+// })

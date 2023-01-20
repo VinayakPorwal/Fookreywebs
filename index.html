@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    Welcome to Backend Iota Server
+    <!-- GET -->
+    /users for fecth users data
+    <!-- POST -->
+    /auth/login/ for login check
+    <!-- POST -->
+    /auth/signup/ for registering users  
+
+</body>
+</html>
+<button onclick="downloadVideo()">Download image</button>
+
+<script type="text/javascript">
+    function downloadVideo() {
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', 'https://img.webmd.com/dtmcms/live/webmd/consumer_assets/site_images/article_thumbnails/slideshows/is_my_cat_normal_slideshow/1800x1200_is_my_cat_normal_slideshow.jpg', true);
+  xhr.responseType = 'blob';
+  xhr.onload = function() {
+    var urlCreator = window.URL || window.webkitURL;
+    var imageUrl = urlCreator.createObjectURL(this.response);
+    var tag = document.createElement('a');
+    tag.href = imageUrl;
+    tag.target = '_blank';
+    tag.download = 'demo.png';
+    document.body.appendChild(tag);
+    tag.click();
+    document.body.removeChild(tag);
+  };
+  xhr.onerror = err => {
+    alert('Failed to download picture');
+  };
+  xhr.send();
+}
+</script>
