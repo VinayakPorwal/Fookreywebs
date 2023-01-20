@@ -1,62 +1,72 @@
 const express = require("express");
 const app = express();
-// const db = require("@cyclic.sh/dynamodb");
-
-const User = require("./models/user");
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-const path = require("path");
-const cors = require("cors");
-const auth = require("./routes/auth");
-const Dbs = require("./db");
 const fs = require("fs");
-const ytdl = require("ytdl-core");
+const db = require("./db.js");
+const path = require("path");
+const mongoose = require("mongoose");
 
-app.set("view engine", "ejs");
+const cors = require("cors");
+// const bodyparser = require("body-parser");
+
+app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cors());
-app.use("/auth", auth);
-process.env.YTDL_NO_UPDATE = "1";
 
-app.get("/users", async (req, res) => {
-  const users = await User.find();
-  console.log(users);
-  res.json({ user: users }).end();
+app.use(express.static(path.join(__dirname, "public")));
+app.set("view engine", "ejs");
+
+
+
+//schema for contact form
+const schema = new mongoose.Schema({
+  name: String,
+  email: String,
+  subject: String,
+  message: String,
+  date: Date,
+});
+const Contact = mongoose.model("contact", schema);
+
+
+// Set the views directory
+// app.set("views", path.join(__dirname, "views"));
+app.get("/", (req, res) => {
+  res.status(200).render("demo");
+});
+app.get("/2", (req, res) => {
+  res.status(200).render("demo");
+});
+app.get("/contact", (req, res) => {
+  res.status(200).render("contact");
+});
+app.get("/about", (req, res) => {
+  res.status(200).render("about");
+});
+app.get("/projects", (req, res) => {
+  res.status(200).render("projects");
+});
+app.get("/signup", (req, res) => {
+  res.status(200).render("signup", { alert: "" });
+});
+app.get("/login", (req, res) => {
+  res.status(200).render("login", { alert: "" });
 });
 
-app.get("/", async (req, res) => {
-  res.sendFile(path.join(__dirname, "./index.html"));
-});
 
-app.get("/index", (req, res) => {
-  return res.render("index");
-});
 
-app.get("/transcript", async (req, res) => {
-  // const v_id = req.query.url.split('v=')[1];
-  return res.send({
-    details: "here",
-  });
-});
-
-app.get("/download", async (req, res) => {
-  const v_id = req.query.url.split("v=")[1];
-  const info = await ytdl.getInfo(req.query.url);
-  // return res.render(("download"), {
-  return res.send({
-    url: "https://www.youtube.com/embed/" + v_id,
-    info: info.formats.sort((a, b) => {
-      return a.mimeType < b.mimeType;
-    }),
-    data : info.related_videos,
-  });
-});
-app.get("/relatedInfo", async (req, res) => {
-  const info = await ytdl.getInfo(req.query.url);
-  // return res.render(("download"), {
-  return res.send({
-    data : info.related_videos,
-  });
+app.post("/contact", (req, res) => {
+  var myData = new Contact(req.body);
+  myData
+    .save()
+    .then(() => {
+      console.log(myData);
+      res.send("This item has been saved to the database");
+    })
+    .catch(() => {
+      res.status(400).send("item was not saved to the databse");
+      console.log(myData);
+      // console.log(res)
+    });
 });
 
 // Catch all handler for all other request.
@@ -65,63 +75,49 @@ app.use("*", (req, res) => {
   // res.sendFile(path.join(__dirname, "./index.html"));
 });
 
+
 // Start the server
 const port = process.env.PORT || 5000;
 app.listen(port, () => {
   console.log(`index.js listening on ${port}`);
 });
 
-// #############################################################################
-// This configures static hosting for files in /public that have the extensions
-// listed in the array.
-// var options = {
-//   dotfiles: 'ignore',
-//   etag: false,
-//   extensions: ['htm', 'html','css','js','ico','jpg','jpeg','png','svg'],
-//   index: ['index.html'],
-//   maxAge: '1m',
-//   redirect: false
-// }
-// app.use(express.static('public', options))
-// #############################################################################
 
-// Create or Update an item
-// app.post('/:col/:key', async (req, res) => {
-//   console.log(req.body)
+// technique to get connect with server without express
+// const http = require('http');
+// const fs = require('fs');
+// const hostname = '127.0.0.1';
+// const port = 80;
 
-//   const col = req.params.col
-//   const key = req.params.key
-//   console.log(`from collection: ${col} delete key: ${key} with params ${JSON.stringify(req.params)}`)
-//   const item = await db.collection(col).set(key, req.body)
-//   console.log(JSON.stringify(item, null, 2))
-//   res.json(item).end()
-// })
+// const home = fs.readFileSync('./home.html');
+// const about = fs.readFileSync('./about.html');
+// const contact = fs.readFileSync('./contact.html');
+// const project = fs.readFileSync('./projects.html');
+// const server = http.createServer((req, res) => {
+//   res.statusCode = 200;
+//   url = req.url;
+//   console.log(url);
+//   res.setHeader('Content-Type', 'text/html');
+//   if (url == '/') {
+//     res.end(home);
+//   }
+//   else if (url == '/about') {
+//     res.end(about);
+//   }
 
-// Delete an item
-// app.delete('/:col/:key', async (req, res) => {
-//   const col = req.params.col
-//   const key = req.params.key
-//   console.log(`from collection: ${col} delete key: ${key} with params ${JSON.stringify(req.params)}`)
-//   const item = await db.collection(col).delete(key)
-//   console.log(JSON.stringify(item, null, 2))
-//   res.json(item).end()
-// })
+//   else if (url == '/contact') {
+//     res.end(contact);
+//   }
+//   else if (url == '/projects') {
+//     res.end(project);
+//   }
+//   else {
+//     res.statusCode = 404;
+//     res.end("<h1>404 not found</h1>");
+//   }
+// });
 
-// Get a single item
-// app.get('/:col/:key', async (req, res) => {
-//   const col = req.params.col
-//   const key = req.params.key
-//   console.log(`from collection: ${col} get key: ${key} with params ${JSON.stringify(req.params)}`)
-//   const item = await db.collection(col).get(key)
-//   console.log(JSON.stringify(item, null, 2))
-//   res.json(item).end()
-// })
+// server.listen(port, hostname, () => {
+//   console.log(`Server running at http://${hostname}:${port}/`);
+// });
 
-// Get a full listing
-// app.get('/:col', async (req, res) => {
-//   const col = req.params.col
-//   console.log(`list collection: ${col} with params: ${JSON.stringify(req.params)}`)
-//   const items = await db.collection(col).list()
-//   console.log(JSON.stringify(items, null, 2))
-//   res.json(items).end()
-// })
